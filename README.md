@@ -1,56 +1,130 @@
-# Welcome to your Expo app 👋
+# LogisticsDemo — Waste Collection Routes
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A React Native app that reads waste collection routes from an Excel file, geocodes addresses, and displays them on a map with route order, schedule info, and statistics.
 
-## Get started
+## Tech stack
 
-1. Install dependencies
+| Layer | Library |
+|---|---|
+| Framework | [Expo SDK 56](https://docs.expo.dev/) + [Expo Router](https://docs.expo.dev/router/introduction/) |
+| UI | React Native 0.85, TypeScript |
+| Maps | [react-native-maps](https://github.com/react-native-maps/react-native-maps) |
+| Excel parsing | [xlsx](https://www.npmjs.com/package/xlsx) (build scripts only) |
+| Geocoding | [OpenStreetMap Nominatim](https://nominatim.org/) (build scripts only) |
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- Parse route data from Excel (`assets/data/routes.xlsx`)
+- Display stops on a map with markers and route polylines
+- Filter stops by collection day (Mon–Sun)
+- Show route stats: stops, containers, volume, distance
+- Show bin schedule and frequency per stop
 
-   ```bash
-   npx expo start
-   ```
+### Schedule codes
 
-In the output, you'll find options to open the app in a
+| Code | Meaning |
+|---|---|
+| `xx3xxx7` | Collected Wed & Sun |
+| `xxx4xxx` | Collected Thu |
+| `1xn` | Once per week |
+| `1x2n` | Once every 2 weeks |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Day patterns use 7 characters (Mon–Sun); a digit means collection on that day.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Getting started
 
-## Get a fresh project
-
-When you're ready, run:
+### 1. Install dependencies
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Process route data (if Excel file changed)
 
-### Other setup steps
+Converts the Excel file into JSON route files:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm run process-routes
+```
 
-## Learn more
+This generates:
+- `src/data/routes-index.json` — route list
+- `src/data/route-modules.ts` — route loader
+- `assets/data/routes/*.json` — per-route stop data
 
-To learn more about developing your project with Expo, look at the following resources:
+### 3. Geocode addresses
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Coordinates are stored in `src/data/geocache.json`. The app reads this file at startup — it does **not** geocode at runtime.
 
-## Join the community
+```bash
+# First route only (~119 addresses, ~2 min)
+npm run geocode
 
-Join our community of developers creating universal apps.
+# Specific route(s) by ID fragment
+npm run geocode 11841
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+# All 430 routes (~14,500 unique addresses, several hours)
+npm run geocode:all
+```
+
+Scripts skip addresses already in the cache, so re-running is safe.
+
+After geocoding, restart the app to load the updated cache.
+
+### 4. Run the app
+
+```bash
+npm start
+```
+
+Then press:
+- `i` — iOS Simulator
+- `a` — Android Emulator
+- `w` — Web browser
+
+Or scan the QR code with Expo Go on a physical device.
+
+## Project structure
+
+```
+assets/data/
+  routes.xlsx              # Source Excel file
+  routes/*.json            # Per-route stop data
+
+src/
+  data/
+    geocache.json          # Geocoded coordinates
+    routes-index.json      # Route summaries
+    route-modules.ts       # Auto-generated route loader
+
+  features/routes/         # Main feature module
+    components/            # Badge, MapStopPin, RouteMapView, etc.
+    hooks/                 # useRoutes
+    utils/                 # Schedule parsing, stats
+    screens/               # RoutesScreen
+
+  components/              # Shared app shell (tabs, themed text)
+
+scripts/
+  process-routes.mjs       # Excel → JSON
+  geocode.mjs              # Nominatim geocoding
+```
+
+## Available scripts
+
+| Script | Description |
+|---|---|
+| `npm start` | Start Expo dev server |
+| `npm run ios` | Start and open iOS simulator |
+| `npm run android` | Start and open Android emulator |
+| `npm run web` | Start web version |
+| `npm run process-routes` | Parse Excel into route JSON |
+| `npm run geocode` | Geocode first route |
+| `npm run geocode:all` | Geocode all routes |
+| `npm run lint` | Run ESLint |
+
+## Notes
+
+- Geocoding uses Nominatim's public API with a ~1 req/sec rate limit. Be respectful of their [usage policy](https://operations.osmfoundation.org/policies/nominatim/).
+- Maps work best on iOS Simulator or a physical device. Web map support is limited.
+- If a route has partial geocoding, the map shows a banner with the count of mapped stops.

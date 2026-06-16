@@ -8,9 +8,11 @@
     "scheme": "logisticsdemo",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.logisticsdemo.app"
     },
     "android": {
+      "package": "com.logisticsdemo.app",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
